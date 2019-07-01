@@ -1,0 +1,17 @@
+{
+  "name": "mbr-mysql",
+  "version": "0.0.1",
+  "description": "MySQL client",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "mysql"
+  ],
+  "author": "MadBrozzeR",
+  "license": "ISC",
+  "dependencies": {
+    "mbr-buffer": "^1.2.0"
+  }
+}
