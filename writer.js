@@ -38,7 +38,7 @@ MySQLWriter.Integer = function (value, length) {
   return Writer.Integer(value, length, INT_PARAMS);
 };
 
-const IntegerLenencType = Writer.Element.extend(function (value) {
+const IntegerLenencType = Writer.Element.extend(function IntegerLenencType (value) {
   Writer.Element.call(this, value, 0);
   this.recalculateLength();
 }, function () {
@@ -54,7 +54,7 @@ IntegerLenencType.prototype.recalculateLength = function () {
   this.length = lenenc.length;
 };
 
-const StringLenencType = Writer.Element.extend(function (value, params = {}) {
+const StringLenencType = Writer.Element.extend(function StringLenencType (value, length, params = {}) {
   Writer.Element.call(this, value, 0);
   this.strLength = length || Buffer.byteLength(value);
   this.encoding = params.encoding || UTF_8;
@@ -62,7 +62,11 @@ const StringLenencType = Writer.Element.extend(function (value, params = {}) {
 }, function () {
   const buffer = Buffer.allocUnsafe(this.length);
   writeLenenc(buffer, this.intPrefix, this.intLength, this.strLength);
-  buffer.write(this.value, this.intLength, this.strLength, this.encoding);
+  if (this.value instanceof Buffer) {
+    this.value.copy(buffer, this.intLength, 0);
+  } else {
+    buffer.write(this.value, this.intLength, this.strLength, this.encoding);
+  }
 
   return Writer.Element.prototype.valueOf.call(this, buffer);
 });
@@ -74,7 +78,7 @@ StringLenencType.prototype.recalculateLength = function () {
   this.length = this.strLength + lenenc.length;
 };
 
-const StringNullType = Writer.Element.extend(function (value, length, params = {}) {
+const StringNullType = Writer.Element.extend(function StringNullType (value, length, params = {}) {
   Writer.Element.call(this, value, (length || Buffer.byteLength(value)) + 1);
   this.encoding = params.encoding || UTF_8;
 }, function () {
@@ -88,3 +92,5 @@ const StringNullType = Writer.Element.extend(function (value, length, params = {
 MySQLWriter.IntegerLenenc = IntegerLenencType.generator();
 MySQLWriter.StringLenenc = StringLenencType.generator();
 MySQLWriter.StringNull = StringNullType.generator();
+
+module.exports = MySQLWriter;

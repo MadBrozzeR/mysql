@@ -7,16 +7,13 @@ module.exports = {
     TIMEOUT: 'timeout',
     ASCII: 'ascii',
     SHA1: 'sha1',
+    SHA256: 'sha256',
     READABLE: 'readable',
     ERROR_TPL: 'ERROR ${code}: ${sql}\n${message}\nParams: ${params}'
   },
 
   RE: {
     DATETIME: /^(?:(\d{4})-(\d\d)-(\d\d))?\s?(?:(\d\d):(\d\d):(\d\d))?$/
-  },
-
-  AUTH: {
-    MYSQL_NATIVE_PASSWORD: 'mysql_native_password'
   },
 
   CAP: {

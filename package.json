@@ -12,6 +12,6 @@
   "author": "MadBrozzeR",
   "license": "ISC",
   "dependencies": {
-    "mbr-buffer": "^1.2.0"
+    "mbr-buffer": "^1.2.1"
   }
 }

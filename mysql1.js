@@ -1,9 +1,9 @@
 const Connection = require('./connection.js');
 const EMPTY = require('./constants.js').EMPTY;
 
-function MySQL(options = {}) {
+function MySQL(options = EMPTY) {
   this.options = {
-    maxPacketSize: 0x1,
+    maxPacketSize: 0x10,
     encoding: 8,
     port: 3306,
     host: 'localhost'
@@ -29,4 +29,13 @@ MySQL.prototype.connect = function (params = EMPTY) {
 }
 
 const mysql = new MySQL();
-mysql.connect();
+mysql.connect({
+  user: 'madbrozzer',
+  password: '123456',
+  onError: function (error) {
+    console.log(error);
+  },
+  onSuccess: function (okPacket) {
+    console.log(okPacket);
+  }
+}).close();
