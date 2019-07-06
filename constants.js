@@ -3,6 +3,7 @@ module.exports = {
     DATA: 'data',
     END: 'end',
     ERROR: 'error',
+    SUCCESS: 'success',
     CLOSE: 'close',
     TIMEOUT: 'timeout',
     ASCII: 'ascii',
@@ -183,6 +184,14 @@ module.exports = {
     VAR_STRING: 0xfd,
     STRING: 0xfe,
     GEOMETRY: 0xff
+  },
+
+  PACKET: {
+    AUTH_MORE_DATA: 0x01,
+    ERROR: 0xff,
+    OK: 0x00,
+    EOF: 0xfe,
+    LOCAL_INFILE: 0xfb
   },
 
   EMPTY: {}

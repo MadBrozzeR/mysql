@@ -33,9 +33,27 @@ mysql.connect({
   user: 'madbrozzer',
   password: '123456',
   onError: function (error) {
-    console.log(error);
+    console.log('Connection failure:', error);
   },
   onSuccess: function (okPacket) {
-    console.log(okPacket);
+    console.log('Connection success:', okPacket);
+  }
+}).query('use mysql', {
+  onSuccess: function (packet) {
+    console.log('Query success:', packet);
+  },
+  onError: function (error) {
+    console.log('Query failure:', error);
+  }
+}).query('select * from user', {
+  onSuccess: function (packet) {
+    console.log('Query success:', packet);
+    let row;
+    while (row = packet.getRow()) {
+      console.log(row);
+    }
+  },
+  onError: function (error) {
+    console.log('Query failure:', error);
   }
 }).close();

@@ -28,9 +28,9 @@ MySQLReader.prototype.readIntLenenc = function () {
   return result;
 }
 
-MySQLReader.prototype.readStrLenenc = function () {
+MySQLReader.prototype.readStrLenenc = function (params = {}) {
   const len = this.readIntLenenc();
-  return this.read(len);
+  return params.keepBuffer ? this.slice(len) : this.read(len);
 }
 
 MySQLReader.prototype.readStrNull = function (encoding) {

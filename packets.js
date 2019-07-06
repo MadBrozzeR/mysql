@@ -3,7 +3,10 @@ const Reader = require('./reader.js');
 const CAP = require('./constants.js').CAP;
 const CONST = require('./constants.js').CONST;
 const FLAG = require('./constants.js').FLAG;
+const PACKET = require('./constants.js').PACKET;
+const TYPE = require('./constants.js').TYPE;
 const capabilities = require('./capabilities.js');
+const getDataByColumnType = require('./formatters.js').getDataByColumnType;
 
 function writeHandshakeResponse (params, session) {
   const base = params.base;
@@ -90,23 +93,24 @@ function readPackets (buffer) {
   return packets;
 }
 
-function readAuthMoreData (buffer) {
-  if (buffer[0] !== 1) {
-    return null;
+function readAuthMoreData (payload) {
+  let result = null;
+
+  if (payload[0] === PACKET.AUTH_MORE_DATA) {
+    const reader = new Reader(buffer);
+    result = {
+      type: reader.readUIntLE(1),
+      data: reader.readStrEof()
+    };
   }
 
-  const reader = new Reader(buffer);
-
-  return {
-    type: reader.readUIntLE(1),
-    data: reader.readStrEof()
-  };
+  return result;
 }
 
 function readErrorPacket (payload, session) {
   let result = null;
 
-  if (payload[0] === 0xff) {
+  if (payload[0] === PACKET.ERROR) {
     let reader = new Reader(payload);
     result = {
       type: reader.readUIntLE(1),
@@ -125,7 +129,7 @@ function readErrorPacket (payload, session) {
 function readOkPacket (payload, session) {
   let result = null;
 
-  if (payload[0] === 0x00 || payload[0] === 0xfe) {
+  if (payload[0] === PACKET.OK || payload[0] === PACKET.EOF) {
     let reader = new Reader(payload);
     result = {
       type: reader.readUIntLE(1),
@@ -148,13 +152,14 @@ function readOkPacket (payload, session) {
       result.info = reader.readStrEof();
     }
   }
+
   return result;
 }
 
 function readEofPacket (payload, session) {
   let result = null;
 
-  if (payload[0] === 0xfe) {
+  if (payload[0] === PACKET.EOF) {
     let reader = new Reader(payload);
     result = {
       type: reader.readUIntLE(1),
@@ -169,6 +174,126 @@ function readEofPacket (payload, session) {
   return result;
 }
 
+function readLocalInfileResponse (payload) {
+  let result = null;
+
+  if (payload[0] === PACKET.LOCAL_INFILE) {
+    const reader = new Reader(payload);
+    result = {
+      type: reader.readUIntLE(1),
+      file: reader.readStrEof()
+    };
+  }
+
+  return result;
+}
+
+function readColumnCount (payload) {
+  const reader = new Reader(payload);
+
+  return reader.readIntLenenc();
+}
+
+function readColumnDefinition (payload, session) {
+  const reader = new Reader(payload);
+
+  let result;
+  if (session.capabilities & CAP.CLIENT_PROTOCOL_41) {
+    result = {
+      catalog: reader.readStrLenenc(),
+      schema: reader.readStrLenenc(),
+      table: reader.readStrLenenc(),
+      orgTable: reader.readStrLenenc(),
+      name: reader.readStrLenenc(),
+      orgName: reader.readStrLenenc(),
+      lengthOfFLFields: reader.readIntLenenc(),
+      charset: reader.readUIntLE(2),
+      length: reader.readUIntLE(4),
+      type: reader.readUIntLE(1),
+      flags: reader.readUIntLE(2),
+      decimals: reader.readUIntLE(1)
+    };
+    reader.skip(2);
+  } else {
+    result = {
+      table: reader.readStrLenenc(),
+      name: reader.readStrLenenc()
+    };
+    const lengthOfColumnLength = reader.readIntLenenc();
+    result.length = reader.readUIntLE(lengthOfColumnLength);
+    const lengthOfTypeField = reader.readIntLenenc();
+    result.type = reader.readUIntLE(lengthOfTypeField);
+
+    reader.skip(1);
+    result.flags = (session.capabilities & CAP.CLIENT_LONG_FLAG)
+      ? reader.readUIntLE(2)
+      : reader.readUIntLE(1);
+    result.decimals = reader.readUIntLE(1);
+  }
+  if (!reader.isEndReached()) {
+    result.defaultValues = reader.readStrLenenc();
+  }
+
+  return result;
+}
+
+function readResultPacket (payload, session) {
+  return readErrorPacket(payload, session)
+    || (!(session.capabilities & CAP.CLIENT_DEPRICATE_EOF) && readEofPacket(payload, session))
+    || readOkPacket(payload, session);
+}
+
+function Resultset (columns) {
+  this.columns = columns;
+  this.data = [];
+  this.end = null;
+  this.index = 0;
+}
+Resultset.prototype.getRow = function (index) {
+  if (index !== undefined) {
+    this.index = index;
+  }
+  let row = null;
+  if (this.data[this.index]) {
+    const reader = new Reader(this.data[this.index]);
+    row = {};
+    const keepBuffer = {keepBuffer: true};
+
+    for (let index = 0 ; index < this.columns.length ; ++index) {
+      const isNull = reader.buffer[reader.index] === 0xfb;
+      const data = isNull ? (reader.skip(1) && null) : reader.readStrLenenc(keepBuffer);
+      const column = this.columns[index];
+
+      row[column.name] = data && getDataByColumnType(data, column);
+    }
+  }
+  ++this.index;
+
+  return row;
+}
+
+function readResultset (packets, session) {
+  const columnCount = readColumnCount(packets[0].payload);
+  let packetCursor = 0;
+  const lastRowIndex = packets.length - 2;
+  const columns = [];
+
+  for (let index = 0 ; index < columnCount ; ++index) {
+    columns.push(readColumnDefinition(packets[++packetCursor].payload, session));
+  }
+  const result = new Resultset(columns);
+
+  if (!(session.capabilities & CAP.CLIENT_DEPRICATE_EOF)) {
+    ++packetCursor;
+  }
+  while (packetCursor < lastRowIndex) {
+    result.data.push(packets[++packetCursor].payload);
+  }
+  result.end = readResultPacket(packets[++packetCursor].payload, session);
+
+  return result;
+}
+
 module.exports = {
   writeHandshakeResponse,
   readHandshakePayload,
@@ -176,5 +301,8 @@ module.exports = {
   readEofPacket,
   readErrorPacket,
   readOkPacket,
+  readLocalInfileResponse,
+  readResultset,
+  readResultPacket,
   readPackets
 };
