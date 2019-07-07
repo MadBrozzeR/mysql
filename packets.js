@@ -5,6 +5,7 @@ const CONST = require('./constants.js').CONST;
 const FLAG = require('./constants.js').FLAG;
 const PACKET = require('./constants.js').PACKET;
 const TYPE = require('./constants.js').TYPE;
+const COM = require('./constants.js').COM;
 const capabilities = require('./capabilities.js');
 const getDataByColumnType = require('./formatters.js').getDataByColumnType;
 
@@ -39,6 +40,13 @@ function writeHandshakeResponse (params, session) {
     authResponse,
     base ? Writer.StringNull(base) : null,
     Writer.StringNull(method)
+  ];
+}
+
+function writeQueryRequest (query) {
+  return [
+    Writer.Integer(COM.QUERY),
+    Writer.String(query)
   ];
 }
 
@@ -294,8 +302,52 @@ function readResultset (packets, session) {
   return result;
 }
 
+function readStmtPrepareOkHead (payload) {
+  let result = null;
+
+  if (psyload[0] === PACKET.OK) {
+    const reader = new Reader(payload);
+    result = {
+      type: reader.readUIntLE(1),
+      id: reader.readUIntLE(4),
+      numColumns: reader.readUIntLE(2),
+      numParams: reader.readUIntLE(2),
+      warnings: reader.skip(1).readUIntLE(2)
+    };
+  }
+
+  return result;
+}
+
+function readStmtPrepareOk (packets, session) {
+  const head = readStmtPrepareOkHead(packets[0].payload);
+  let result = null;
+  let packetIndex = 1;
+
+  if (head) {
+    result = {
+      type: head.type,
+      id: head.id,
+      params: [],
+      columns: []
+    };
+
+    for (let index = 0 ; index < head.numParams ; ++index) {
+      result.params.push(readColumnDefinition(packets[packetIndex++].payload, session));
+    }
+    packets[packetIndex] && (packets[packetIndex].payload[0] === PACKET.EOF) && (++packetIndex);
+    for (let index = 0 ; index < head.numColumns ; ++index) {
+      result.columns.push(readColumnDefinition(packets[packetIndex++].payload, session));
+    }
+  }
+
+  return result;
+}
+
 module.exports = {
   writeHandshakeResponse,
+  writeQueryRequest,
+
   readHandshakePayload,
   readAuthMoreData,
   readEofPacket,
@@ -303,6 +355,7 @@ module.exports = {
   readOkPacket,
   readLocalInfileResponse,
   readResultset,
+  readStmtPrepareOk,
   readResultPacket,
   readPackets
 };
