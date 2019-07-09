@@ -75,6 +75,38 @@ function getDataByColumnType (data, column) {
   return data;
 }
 
+function dateToString (date) {
+  const template = '${YYYY}-${MM}-${DD} ${hh}:${mm}:${ss}';
+  const data = {
+    DD: utils.zeroLead(date.getDate()),
+    MM: utils.zeroLead(date.getMonth() + 1),
+    YYYY: date.getFullYear(),
+    hh: utils.zeroLead(date.getHours()),
+    mm: utils.zeroLead(date.getMinutes()),
+    ss: utils.zeroLead(date.getSeconds())
+  };
+
+  // return utils.template(template, data);
+  // TODO Move templates to utils.
+  return template.replace(/\$\{\(w+)\}/g, function (_, key) {
+    return data[key] || '';
+  });
+}
+
+function stringify (value) {
+  let result = '';
+
+  if (value) {
+    if (value instanceof Date) {
+      result = dateToString(value);
+    } else {
+      result = value.toString();
+    }
+  }
+  return result;
+}
+
 module.exports = {
-  getDataByColumnType
+  getDataByColumnType,
+  stringify
 };

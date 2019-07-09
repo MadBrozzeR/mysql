@@ -59,14 +59,14 @@ Connection.prototype.close = function (instant) {
   if (instant || this.queue.isEmpty()) {
     socket.end();
   } else {
-    const operation = this.queue.push(operations.close, {session: this});
+    this.queue.push(operations.close, {session: this});
   }
 
   return this;
 };
 
 Connection.prototype.query = function (data, params = EMPTY) {
-  const operation = this.queue.push(operations.query, {
+  this.queue.push(operations.query, {
     session: this,
     data: data,
     type: 'query',
@@ -76,5 +76,38 @@ Connection.prototype.query = function (data, params = EMPTY) {
 
   return this;
 };
+
+function Statement (command, session) {
+  this.command = command;
+  this.model = null;
+  this.session = session;
+}
+
+Connection.prototype.prepare = function (command, params = EMPTY) {
+  const statement = new Statement(command, this);
+
+  this.queue.push(operations.prepare, {
+    session: this,
+    statement: statement,
+    type: 'prepare_statement',
+    onSuccess: params.onSuccess,
+    onError: params.onError
+  });
+
+  return statement;
+};
+
+Statement.prototype.execute = function (statementParams, params = EMPTY) {
+  this.session.queue.push(operations.execute, {
+    session: this.session,
+    statement: this,
+    params: statementParams,
+    type: 'execute_statement',
+    onSuccess: params.onSuccess,
+    onError: params.onError
+  });
+
+  return this;
+}
 
 module.exports = Connection;

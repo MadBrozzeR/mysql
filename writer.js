@@ -1,6 +1,9 @@
 const Writer = require('mbr-buffer').Writer;
 
-const MySQLWriter = {...Writer};
+const MySQLWriter = {};
+for (let item in Writer) {
+  MySQLWriter[item] = Writer[item];
+}
 
 const INT_PARAMS = {unsigned: true, littleEndian: true};
 const UTF_8 = 'utf8';

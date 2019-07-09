@@ -5,6 +5,11 @@ const Packets = require('../packets.js');
 const PACKET = require('../constants.js').PACKET;
 const CONST = require('../constants.js').CONST;
 
+const PHASE = {
+  INIT: 'INIT',
+  CHECK: 'CHECK'
+};
+
 function handshakeResponse (handshake, callback) {
   const user = this.params.user;
   const pass = this.params.pass || '';
@@ -25,6 +30,9 @@ function handshakeResponse (handshake, callback) {
 module.exports = {
   error: handleError,
   success: handleSuccess,
+  init: function () {
+    this.params.phase = PHASE.INIT;
+  },
   data: function (packets) {
     const operation = this;
     const packet = packets[0];
@@ -32,14 +40,14 @@ module.exports = {
     this.params.sid = packet.sid;
 
     switch (this.params.phase) {
-      case 'INIT':
+      case PHASE.INIT:
         const handshake = Packets.readHandshakePayload(packet.payload);
         handshakeResponse.call(this, handshake, function (response) {
-          operation.params.phase = 'CHECK';
+          operation.params.phase = PHASE.CHECK;
           session.send(++operation.params.sid, response);
         });
         break;
-      case 'CHECK':
+      case PHASE.CHECK:
         const result = Packets.readAuthMoreData(packet.payload)
           || Packets.readResultPacket(packet.payload, session);
         switch (result.type) {

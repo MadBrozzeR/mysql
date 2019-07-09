@@ -8,6 +8,7 @@ const TYPE = require('./constants.js').TYPE;
 const COM = require('./constants.js').COM;
 const capabilities = require('./capabilities.js');
 const getDataByColumnType = require('./formatters.js').getDataByColumnType;
+const stringify = require('./formatters.js').stringify;
 
 function writeHandshakeResponse (params, session) {
   const base = params.base;
@@ -43,10 +44,74 @@ function writeHandshakeResponse (params, session) {
   ];
 }
 
-function writeQueryRequest (query) {
+function writeQueryRequest (command) {
   return [
     Writer.Integer(COM.QUERY),
-    Writer.String(query)
+    Writer.String(command)
+  ];
+}
+
+function writePrepareRequest (command) {
+  return [
+    Writer.Integer(COM.STMT_PREPARE),
+    Writer.String(command)
+  ];
+}
+
+function writeExecuteRequest (statement, data = []) {
+  const types = [];
+  const values = [];
+  const params = statement.model.params;
+  const nullBitmapLength = Math.ceil(params.length / 8);
+  const nullBitmap = !!nullBitmapLength && Buffer.alloc(nullBitmapLength, 0);
+  let unsigned;
+
+  for (let index = 0 ; index < params.length ; ++index) {
+    unsigned = (params[index].flags & 0x80) << 8;
+    types.push(Writer.Integer(params[index].type | unsigned, 2));
+    const value = data[index];
+    const param = params[index];
+
+    if (value === null) {
+      const nullByte = Math.floor(index / 8);
+      const nullBit = index % 8;
+      nullBitmap[nullByte] |= 1 << nullBit;
+    } else {
+      switch (param.type) {
+        case TYPE.VARCHAR:
+        case TYPE.VAR_STRING:
+          values.push(Writer.StringLenenc(stringify(value)));
+          break;
+        case TYPE.TINY:
+          values.push(Writer.Integer(value, 1));
+          break;
+        case TYPE.SHORT:
+        case TYPE.YEAR:
+          values.push(Writer.Integer(value, 2));
+          break;
+        case TYPE.LONG:
+        case TYPE.INT24:
+          values.push(Writer.Integer(value, 4));
+          break;
+        case TYPE.LONGLONG:
+          values.push(writer.Integer(value, 8));
+          break;
+        default:
+          values.push(Writer.StringLenenc(stringify(value)));
+          break;
+      }
+    }
+  }
+
+  return [
+    Writer.Integer(COM.STMT_EXECUTE),
+    Writer.Integer(statement.model.id, 4),
+    Writer.Fill(0),
+    Writer.Integer(1, 4),
+    nullBitmap && Writer.Buffer(nullBitmap),
+    Writer.Integer(values.length ? 1 : 0, 1),
+    types,
+    values
   ];
 }
 
@@ -122,7 +187,6 @@ function readErrorPacket (payload, session) {
     let reader = new Reader(payload);
     result = {
       type: reader.readUIntLE(1),
-      failure: true,
       code: reader.readInt(2)
     };
     if (session.capabilities & CAP.CLIENT_PROTOCOL_41) {
@@ -141,7 +205,6 @@ function readOkPacket (payload, session) {
     let reader = new Reader(payload);
     result = {
       type: reader.readUIntLE(1),
-      ok: true,
       affectedRows: reader.readIntLenenc(),
       lastInsertId: reader.readIntLenenc()
     };
@@ -170,8 +233,7 @@ function readEofPacket (payload, session) {
   if (payload[0] === PACKET.EOF) {
     let reader = new Reader(payload);
     result = {
-      type: reader.readUIntLE(1),
-      ok: true
+      type: reader.readUIntLE(1)
     };
     if (session.capabilities & CAP.CLIENT_PROTOCOL_41) {
       result.warnings = reader.readUIntLE(2);
@@ -261,43 +323,93 @@ Resultset.prototype.getRow = function (index) {
   if (index !== undefined) {
     this.index = index;
   }
+  const data = this.data[this.index];
   let row = null;
-  if (this.data[this.index]) {
-    const reader = new Reader(this.data[this.index]);
-    row = {};
-    const keepBuffer = {keepBuffer: true};
-
-    for (let index = 0 ; index < this.columns.length ; ++index) {
-      const isNull = reader.buffer[reader.index] === 0xfb;
-      const data = isNull ? (reader.skip(1) && null) : reader.readStrLenenc(keepBuffer);
-      const column = this.columns[index];
-
-      row[column.name] = data && getDataByColumnType(data, column);
-    }
+  if (data) {
+    row = (data[0] === 0x00) ? this.getBinaryRow(this.index) : this.getRawRow(this.index);
+    ++this.index;
   }
-  ++this.index;
+
+  return row;
+}
+Resultset.prototype.getRawRow = function (index) {
+  const reader = new Reader(this.data[index]);
+  const row = {};
+  const keepBuffer = {keepBuffer: true};
+
+  for (let index = 0 ; index < this.columns.length ; ++index) {
+    const isNull = reader.buffer[reader.index] === 0xfb;
+    const data = isNull ? (reader.skip(1) && null) : reader.readStrLenenc(keepBuffer);
+    const column = this.columns[index];
+
+    row[column.name] = data && getDataByColumnType(data, column);
+  }
+
+  return row;
+}
+Resultset.prototype.getBinaryRow = function (index) {
+  const reader = new Reader(this.data[index]);
+  const header = reader.readUIntLE(1);
+  const nullBitmapLength = Math.ceil((this.columns.length + 2) / 8);
+    let nullBitmap = reader.slice(nullBitmapLength);
+    const keepBuffer = {keepBuffer: true};
+  const row = {};
+  let data;
+
+  for (let index = 0 ; index < this.columns.length ; ++index) {
+    const nullByte = Math.floor((index + 2) / 8);
+    const nullBit = (index + 2) % 8;
+    if (nullBitmap[nullByte] & 1 << nullBit) {
+      data = null;
+    } else {
+      switch (this.columns[index].type) {
+        case TYPE.LONGLONG:
+          data = parseInt(reader.readUIntLE(8), 10);
+          break;
+        case TYPE.LONG:
+          data = parseInt(reader.readUIntLE(4), 10);
+          break;
+        case TYPE.SHORT:
+          data = parseInt(reader.readUIntLE(2), 10);
+          break;
+        case TYPE.TINY:
+          data = parseInt(reader.readUIntLE(1), 10);
+          break;
+        case TYPE.DOUBLE:
+          data = reader.read(8);
+          break;
+        case TYPE.FLOAT:
+          data = reader.read(4);
+          break;
+        default:
+          data = getDataByColumnType(reader.readStrLenenc(keepBuffer), this.columns[index]);
+          break;
+      }
+    }
+    row[this.columns[index].name] = data;
+  }
 
   return row;
 }
 
 function readResultset (packets, session) {
   const columnCount = readColumnCount(packets[0].payload);
-  let packetCursor = 0;
+  let current = 0;
   const lastRowIndex = packets.length - 2;
   const columns = [];
 
   for (let index = 0 ; index < columnCount ; ++index) {
-    columns.push(readColumnDefinition(packets[++packetCursor].payload, session));
+    columns.push(readColumnDefinition(packets[++current].payload, session));
   }
   const result = new Resultset(columns);
 
   if (!(session.capabilities & CAP.CLIENT_DEPRICATE_EOF)) {
-    ++packetCursor;
+    ++current;
   }
-  while (packetCursor < lastRowIndex) {
-    result.data.push(packets[++packetCursor].payload);
+  while (current < lastRowIndex) {
+    result.data.push(packets[++current].payload);
   }
-  result.end = readResultPacket(packets[++packetCursor].payload, session);
+  result.end = readResultPacket(packets[++current].payload, session);
 
   return result;
 }
@@ -305,7 +417,7 @@ function readResultset (packets, session) {
 function readStmtPrepareOkHead (payload) {
   let result = null;
 
-  if (psyload[0] === PACKET.OK) {
+  if (payload[0] === PACKET.OK) {
     const reader = new Reader(payload);
     result = {
       type: reader.readUIntLE(1),
@@ -347,6 +459,8 @@ function readStmtPrepareOk (packets, session) {
 module.exports = {
   writeHandshakeResponse,
   writeQueryRequest,
+  writePrepareRequest,
+  writeExecuteRequest,
 
   readHandshakePayload,
   readAuthMoreData,

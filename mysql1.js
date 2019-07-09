@@ -38,16 +38,16 @@ mysql.connect({
   onSuccess: function (okPacket) {
     console.log('Connection success:', okPacket);
   }
-}).query('use mysql', {
+ }).query('use mysql', {
   onSuccess: function (packet) {
     console.log('Query success:', packet);
   },
   onError: function (error) {
     console.log('Query failure:', error);
   }
-}).query('select * from user', {
+/* }).query('select host,user,authentication_string,max_connections from user', {
   onSuccess: function (packet) {
-    console.log('Query success:', packet);
+    console.log('Query success:');
     let row;
     while (row = packet.getRow()) {
       console.log(row);
@@ -56,4 +56,22 @@ mysql.connect({
   onError: function (error) {
     console.log('Query failure:', error);
   }
-}).close();
+*/ }).prepare('select * from user where max_connections=?', {
+  onSuccess: function (result) {
+    console.log('Prepare success:', result);
+  },
+  onError: function (error) {
+    console.log('Prepare failure:', error);
+  }
+}).execute([0], {
+  onSuccess: function (result) {
+    console.log('Execute success:');
+    let row;
+    while (row = result.getRow()) {
+      console.log(row);
+    }
+  },
+  onError: function (error) {
+    console.log('Prepare failure:', error);
+  }
+}).session.close();
