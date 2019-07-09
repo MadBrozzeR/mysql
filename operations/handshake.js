@@ -1,7 +1,7 @@
 const handleError = require('./common.js').handleError;
 const handleSuccess = require('./common.js').handleSuccess;
 const Authentication = require('../auth.js');
-const Packets = require('../packets.js');
+const Packets = require('../packets/index.js');
 const PACKET = require('../constants.js').PACKET;
 const CONST = require('../constants.js').CONST;
 

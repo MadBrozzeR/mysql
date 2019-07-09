@@ -5,7 +5,7 @@ const Reader = require('./reader.js');
 const Writer = require('./writer.js');
 const Authentication = require('./auth.js');
 const capabilities = require('./capabilities.js');
-const Packets = require('./packets.js');
+const Packets = require('./packets/index.js');
 const operations = require('./operations/index.js');
 
 function socketTimeout () {

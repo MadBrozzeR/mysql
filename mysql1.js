@@ -45,7 +45,7 @@ mysql.connect({
   onError: function (error) {
     console.log('Query failure:', error);
   }
-/* }).query('select host,user,authentication_string,max_connections from user', {
+}).query('select host,user,authentication_string,max_connections from user', {
   onSuccess: function (packet) {
     console.log('Query success:');
     let row;
@@ -56,7 +56,7 @@ mysql.connect({
   onError: function (error) {
     console.log('Query failure:', error);
   }
-*/ }).prepare('select * from user where max_connections=?', {
+}).prepare('select * from user where max_connections=?', {
   onSuccess: function (result) {
     console.log('Prepare success:', result);
   },
