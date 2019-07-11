@@ -105,4 +105,15 @@ Statement.prototype.execute = function (statementParams, params = EMPTY) {
   return this;
 }
 
+Statement.prototype.sendLongData = function (paramIndex, data, params = EMPTY) {
+  this.session.queue.push(operations.sendLongData, {
+    session: this.session,
+    statement: this,
+    paramIndex: paramIndex,
+    data: data,
+    type: 'send_long_data',
+    chunkSize: params.chunkSize
+  });
+};
+
 module.exports = Connection;
