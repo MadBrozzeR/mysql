@@ -13,6 +13,35 @@ module.exports.writePrepareRequest = function writePrepareRequest (command) {
   ];
 };
 
+const emptyBuffer = Buffer.from('');
+
+const MAX_SIZE = 1024 * 1024 * 3;
+const MIN_SIZE = 1024;
+
+function writeSplitBySize (buffer, params) {
+  const statementId = params.statementId;
+  const paramIndex = params.paramInndex;
+  const longData = params.longData;
+  const values = params.values;
+
+  if (buffer.length < MIN_SIZE) {
+    values.push(Writer.StringLenenc(buffer));
+  } else {
+    let index = 0;
+    let last;
+
+    while (index < buffer.length) {
+      last = index + MAX_SIZE;
+      if (last >= buffer.length) {
+        last = undefined;
+      }
+      longData.push(writeLongData(statementId, paramIndex, buffer.slice(index, last)));
+      index += MAX_SIZE;
+    }
+    values.push(Writer.Buffer(emptyBuffer));
+  }
+}
+
 module.exports.writeExecuteRequest = function writeExecuteRequest (statement, data = []) {
   const types = [];
   const values = [];
@@ -20,6 +49,7 @@ module.exports.writeExecuteRequest = function writeExecuteRequest (statement, da
   const nullBitmapLength = Math.ceil(params.length / 8);
   const nullBitmap = !!nullBitmapLength && Buffer.alloc(nullBitmapLength, 0);
   let unsigned;
+  const longData = [];
 
   for (let index = 0 ; index < params.length ; ++index) {
     unsigned = (params[index].flags & 0x80) << 8;
@@ -33,10 +63,6 @@ module.exports.writeExecuteRequest = function writeExecuteRequest (statement, da
       nullBitmap[nullByte] |= 1 << nullBit;
     } else {
       switch (param.type) {
-        case TYPE.VARCHAR:
-        case TYPE.VAR_STRING:
-          values.push(Writer.StringLenenc(stringify(value)));
-          break;
         case TYPE.TINY:
           values.push(Writer.Integer(value, 1));
           break;
@@ -49,7 +75,20 @@ module.exports.writeExecuteRequest = function writeExecuteRequest (statement, da
           values.push(Writer.Integer(value, 4));
           break;
         case TYPE.LONGLONG:
-          values.push(writer.Integer(value, 8));
+          values.push(Writer.Integer(value, 8));
+          break;
+        case TYPE.TINY_BLOB:
+        case TYPE.MEDIUM_BLOB:
+        case TYPE.BLOB:
+        case TYPE.LONG_BLOB:
+        case TYPE.VARCHAR:
+        case TYPE.VAR_STRING:
+          writeSplitBySize(value, {
+            statementId: statement.model.id,
+            paramIndex: index,
+            longData: longData,
+            values: values
+          });
           break;
         default:
           values.push(Writer.StringLenenc(stringify(value)));
@@ -58,16 +97,19 @@ module.exports.writeExecuteRequest = function writeExecuteRequest (statement, da
     }
   }
 
-  return [
-    Writer.Integer(COM.STMT_EXECUTE),
-    Writer.Integer(statement.model.id, 4),
-    Writer.Fill(0),
-    Writer.Integer(1, 4),
-    nullBitmap && Writer.Buffer(nullBitmap),
-    Writer.Integer(values.length ? 1 : 0, 1),
-    types,
-    values
-  ];
+  return {
+    longData: longData,
+    command: [
+      Writer.Integer(COM.STMT_EXECUTE),
+      Writer.Integer(statement.model.id, 4),
+      Writer.Fill(0),
+      Writer.Integer(1, 4),
+      nullBitmap && Writer.Buffer(nullBitmap),
+      Writer.Integer(values.length ? 1 : 0, 1),
+      types,
+      values
+    ]
+  };
 };
 
 function readStmtPrepareOkHead (payload) {
@@ -111,3 +153,14 @@ module.exports.readStmtPrepareOk = function readStmtPrepareOk (packets, session)
 
   return result;
 };
+
+function writeLongData (statementId, paramIndex, data) {
+  return [
+    Writer.Integer(COM.STMT_SEND_LONG_DATA),
+    Writer.Integer(statementId, 4),
+    Writer.Integer(paramIndex, 2),
+    Writer.Buffer(data)
+  ];
+}
+
+module.exports.writeLongData = writeLongData;

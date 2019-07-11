@@ -49,12 +49,18 @@ module.exports = {
         break;
       case PHASE.CHECK:
         const result = Packets.readAuthMoreData(packet.payload)
+          || Packets.readAuthSwitchRequest(packet.payload)
           || Packets.readResultPacket(packet.payload, session);
+
         switch (result.type) {
           case PACKET.ERROR:
             this.queue.trigger(CONST.ERROR, result);
             break;
-          case PACKET.EOF:
+          case PACKET.AUTH_SWITCH:
+            Authentication(result.plugin, this.params.pass || '', function (data) {
+              data && session.send(++operation.params.sid, data);
+            });
+            break;
           case PACKET.OK:
             this.queue.trigger(CONST.SUCCESS, result);
             break;

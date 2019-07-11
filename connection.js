@@ -43,12 +43,7 @@ function Connection (params = EMPTY) {
 }
 
 Connection.prototype.send = function (sid, data) {
-  const payload = Writer.Group(data);
-  const result = Writer.make([
-    Writer.SizeOf(payload, 3, { unsigned: true, littleEndian: true }),
-    Writer.Integer(sid, 1),
-    payload
-  ]);
+  const result = Writer.make(Packets.writePacket(sid, data));
 
   console.log('client:', result.valueOf());
   this.socket.write(result);

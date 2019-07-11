@@ -1,4 +1,5 @@
 const Reader = require('../reader.js');
+const Writer = require('../writer.js');
 const PACKET = require('../constants.js').PACKET;
 const CAP = require('../constants.js').CAP;
 const FLAG = require('../constants.js').FLAG;
@@ -106,11 +107,21 @@ function readResultPacket (payload, session) {
     || readOkPacket(payload, session);
 };
 
+function writePacket (sid, data) {
+  const payload = Writer.Group(data);
+  return [
+    Writer.SizeOf(payload, 3, { unsigned: true, littleEndian: true }),
+    Writer.Integer(sid % 0xff, 1),
+    payload
+  ];
+}
+
 module.exports = {
   readErrorPacket: readErrorPacket,
   readOkPacket: readOkPacket,
   readEofPacket: readEofPacket,
   readPackets: readPackets,
   readLocalInfileResponse: readLocalInfileResponse,
-  readResultPacket: readResultPacket
+  readResultPacket: readResultPacket,
+  writePacket: writePacket
 };

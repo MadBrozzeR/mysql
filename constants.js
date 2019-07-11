@@ -188,10 +188,12 @@ module.exports = {
 
   PACKET: {
     AUTH_MORE_DATA: 0x01,
+    AUTH_SWITCH: 0xfe,
     ERROR: 0xff,
     OK: 0x00,
     EOF: 0xfe,
-    LOCAL_INFILE: 0xfb
+    LOCAL_INFILE: 0xfb,
+    BINARY_PROTOCOL_ROW: 0x00
   },
 
   EMPTY: {}

@@ -6,7 +6,19 @@ const CONST = require('../constants.js').CONST;
 
 module.exports = {
   init: function () {
-    this.params.session.send(0, Packets.writeExecuteRequest(this.params.statement, this.params.params));
+    const preparedRequest = Packets.writeExecuteRequest(this.params.statement, this.params.params);
+    /*
+    let args = [0];
+    for (let index = 0 ; index < preparedRequest.longData.length ; ++index) {
+      args.push(preparedRequest.longData[index]);
+    }
+    args.push(preparedRequest.command);
+    this.params.session.send.apply(this.params.session, args);
+    */
+    for (let index = 0 ; index < preparedRequest.longData.length ; ++index) {
+      this.params.session.send(0, preparedRequest.longData[index]);
+    }
+    this.params.session.send(0, preparedRequest.command);
   },
   error: handleError,
   success: handleSuccess,
@@ -20,7 +32,7 @@ module.exports = {
         case PACKET.ERROR:
           this.queue.trigger(CONST.ERROR, result);
           break;
-        case PACKET.SUCCESS:
+        case PACKET.OK:
           this.queue.trigger(CONST.SUCCESS, result);
           break;
       }

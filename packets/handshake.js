@@ -85,3 +85,23 @@ module.exports.readHandshakePayload = function readHandshakePayload (buffer) {
   }
   return result;
 };
+
+module.exports.readAuthSwitchRequest = function readAuthSwitchRequest (payload) {
+  let result = null;
+
+  if (payload[0] === PACKET.AUTH_SWITCH) {
+    const reader = new Reader(payload);
+
+    result = {
+      type: reader.readUIntLE(1),
+      plugin: reader.readStrNull(),
+      data: reader.readStrEof()
+    };
+  }
+
+  return result;
+};
+
+module.exports.writeAuthSwitchResponse = function writeAuthSwitchResponse (data) {
+  return Writer.Buffer(data);
+}
