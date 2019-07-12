@@ -8,10 +8,7 @@ module.exports = {
   init: function () {
     try {
       const preparedRequest = Packets.writeExecuteRequest(this.params.statement, this.params.params);
-      for (let index = 0 ; index < preparedRequest.longData.length ; ++index) {
-        this.params.session.send(0, preparedRequest.longData[index]);
-      }
-      this.params.session.send(0, preparedRequest.command);
+      this.params.session.send(0, preparedRequest);
     } catch (error) {
       this.queue.trigger(CONST.ERROR, error);
     }

@@ -18,30 +18,6 @@ const emptyBuffer = Buffer.from('');
 const MAX_SIZE = 1024 * 1024 * 3;
 const MIN_SIZE = 1024;
 
-function writeSplitBySize (buffer, params) {
-  const statementId = params.statementId;
-  const paramIndex = params.paramInndex;
-  const longData = params.longData;
-  const values = params.values;
-
-  if (buffer.length < MIN_SIZE) {
-    values.push(Writer.StringLenenc(buffer));
-  } else {
-    let index = 0;
-    let last;
-
-    while (index < buffer.length) {
-      last = index + MAX_SIZE;
-      if (last >= buffer.length) {
-        last = undefined;
-      }
-      longData.push(writeLongData(statementId, paramIndex, buffer.slice(index, last)));
-      index += MAX_SIZE;
-    }
-    values.push(Writer.Buffer(emptyBuffer));
-  }
-}
-
 module.exports.writeExecuteRequest = function writeExecuteRequest (statement, data = []) {
   const types = [];
   const values = [];
@@ -49,7 +25,6 @@ module.exports.writeExecuteRequest = function writeExecuteRequest (statement, da
   const nullBitmapLength = Math.ceil(params.length / 8);
   const nullBitmap = !!nullBitmapLength && Buffer.alloc(nullBitmapLength, 0);
   let unsigned;
-  const longData = [];
 
   for (let index = 0 ; index < params.length ; ++index) {
     unsigned = (params[index].flags & 0x80) << 8;
@@ -83,33 +58,23 @@ module.exports.writeExecuteRequest = function writeExecuteRequest (statement, da
         case TYPE.LONG_BLOB:
         case TYPE.VARCHAR:
         case TYPE.VAR_STRING:
-          writeSplitBySize(value, {
-            statementId: statement.model.id,
-            paramIndex: index,
-            longData: longData,
-            values: values
-          });
-          break;
         default:
-          values.push(Writer.StringLenenc(stringify(value)));
+          values.push(Writer.StringLenenc(value));
           break;
       }
     }
   }
 
-  return {
-    longData: longData,
-    command: [
-      Writer.Integer(COM.STMT_EXECUTE),
-      Writer.Integer(statement.model.id, 4),
-      Writer.Fill(0),
-      Writer.Integer(1, 4),
-      nullBitmap && Writer.Buffer(nullBitmap),
-      Writer.Integer(values.length ? 1 : 0, 1),
-      types,
-      values
-    ]
-  };
+  return [
+    Writer.Integer(COM.STMT_EXECUTE),
+    Writer.Integer(statement.model.id, 4),
+    Writer.Fill(0),
+    Writer.Integer(1, 4),
+    nullBitmap && Writer.Buffer(nullBitmap),
+    Writer.Integer(values.length ? 1 : 0, 1),
+    types,
+    values
+  ];
 };
 
 function readStmtPrepareOkHead (payload) {
