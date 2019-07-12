@@ -8,8 +8,8 @@ const readColumnDefinition = require('./resultset.js').readColumnDefinition;
 
 module.exports.writePrepareRequest = function writePrepareRequest (command) {
   return [
-    Writer.Integer(COM.STMT_PREPARE),
-    Writer.String(command)
+    Writer.Integer(COM.STMT_PREPARE).is('COM_STMT_PREPARE command byte'),
+    Writer.String(command).is('SQL query')
   ];
 };
 
@@ -28,8 +28,9 @@ module.exports.writeExecuteRequest = function writeExecuteRequest (statement, da
 
   for (let index = 0 ; index < params.length ; ++index) {
     unsigned = (params[index].flags & 0x80) << 8;
-    types.push(Writer.Integer(params[index].type | unsigned, 2));
+    types.push(Writer.Integer(params[index].type | unsigned, 2).is('Parameter-' + index + ' type'));
     const value = data[index];
+    let writerValue;
     const param = params[index];
 
     if (value === null) {
@@ -39,18 +40,18 @@ module.exports.writeExecuteRequest = function writeExecuteRequest (statement, da
     } else {
       switch (param.type) {
         case TYPE.TINY:
-          values.push(Writer.Integer(value, 1));
+          writerValue = Writer.Integer(value, 1);
           break;
         case TYPE.SHORT:
         case TYPE.YEAR:
-          values.push(Writer.Integer(value, 2));
+          writerValue = Writer.Integer(value, 2);
           break;
         case TYPE.LONG:
         case TYPE.INT24:
-          values.push(Writer.Integer(value, 4));
+          writerValue = Writer.Integer(value, 4);
           break;
         case TYPE.LONGLONG:
-          values.push(Writer.Integer(value, 8));
+          writerValue = Writer.Integer(value, 8);
           break;
         case TYPE.TINY_BLOB:
         case TYPE.MEDIUM_BLOB:
@@ -59,19 +60,21 @@ module.exports.writeExecuteRequest = function writeExecuteRequest (statement, da
         case TYPE.VARCHAR:
         case TYPE.VAR_STRING:
         default:
-          values.push(Writer.StringLenenc(value));
+          writerValue = Writer.StringLenenc(value);
           break;
       }
+
+      values.push(writerValue.is('Parameter-' + index + ' value'));
     }
   }
 
   return [
-    Writer.Integer(COM.STMT_EXECUTE),
-    Writer.Integer(statement.model.id, 4),
-    Writer.Fill(0),
-    Writer.Integer(1, 4),
-    nullBitmap && Writer.Buffer(nullBitmap),
-    Writer.Integer(values.length ? 1 : 0, 1),
+    Writer.Integer(COM.STMT_EXECUTE).is('COM_STMT_EXECUTE command byte'),
+    Writer.Integer(statement.model.id, 4).is('Statement id'),
+    Writer.Fill(0).is('Flags'),
+    Writer.Integer(1, 4).is('Iteration count'),
+    nullBitmap && Writer.Buffer(nullBitmap).is('Null bitmap'),
+    Writer.Integer(values.length ? 1 : 0, 1).is('Is new parameters bound?'),
     types,
     values
   ];
@@ -121,10 +124,10 @@ module.exports.readStmtPrepareOk = function readStmtPrepareOk (packets, session)
 
 function writeLongData (statementId, paramIndex, data) {
   return [
-    Writer.Integer(COM.STMT_SEND_LONG_DATA),
-    Writer.Integer(statementId, 4),
-    Writer.Integer(paramIndex, 2),
-    Writer.Buffer(data)
+    Writer.Integer(COM.STMT_SEND_LONG_DATA).is('COM_STMT_SEND_LONG_DATA command byte'),
+    Writer.Integer(statementId, 4).is('Statement id'),
+    Writer.Integer(paramIndex, 2).is('Parameter index'),
+    Writer.Buffer(data).is('Data')
   ];
 }
 

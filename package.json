@@ -1,6 +1,6 @@
 {
   "name": "mbr-mysql",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "MySQL client",
   "main": "index.js",
   "scripts": {
@@ -12,6 +12,6 @@
   "author": "MadBrozzeR",
   "license": "ISC",
   "dependencies": {
-    "mbr-buffer": "^1.2.1"
+    "mbr-buffer": "1.2.2"
   }
 }

@@ -110,8 +110,8 @@ function readResultPacket (payload, session) {
 function writePacket (sid, data) {
   const payload = Writer.Group(data);
   return [
-    Writer.SizeOf(payload, 3, { unsigned: true, littleEndian: true }),
-    Writer.Integer(sid % 0xff, 1),
+    Writer.SizeOf(payload, 3, { unsigned: true, littleEndian: true }).is('Payload size'),
+    Writer.Integer(sid % 0xff, 1).is('SID'),
     payload
   ];
 }

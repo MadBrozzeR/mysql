@@ -31,25 +31,25 @@ module.exports.writeHandshakeResponse = function writeHandshakeResponse (params,
   let authLen = null;
   let authResponse;
   if (commonCapabilities & CAP.CLIENT_PLUGIN_AUTH_LENENC_CLIENT_DATA) {
-    authLen = Writer.IntegerLenenc(authData.length);
-    authResponse = Writer.Buffer(authData);
+    authLen = Writer.IntegerLenenc(authData.length).is('Auth data length');
+    authResponse = Writer.Buffer(authData).is('Auth data');
   } else if (commonCapabilities & CAP.CLIENT_SECURE_CONNECTION) {
-    authLen = Writer.Integer(authData.length, 1);
-    authText = Writer.Buffer(authData);
+    authLen = Writer.Integer(authData.length, 1).is('Auth data length');
+    authResponse = Writer.Buffer(authData).is('Auth data');
   } else {
-    authResponse = [Writer.Buffer(authData), Writer.Fill()];
+    authResponse = [Writer.Buffer(authData).is('Auth data'), Writer.Fill()];
   }
 
   return [
-    Writer.Integer(commonCapabilities, 4),
-    Writer.Integer(session.options.maxPacketSize, 4),
-    Writer.Integer(session.options.encoding, 1),
-    Writer.Fill(0, 23),
-    Writer.StringNull(user),
-    authLen,
-    authResponse,
-    base ? Writer.StringNull(base) : null,
-    Writer.StringNull(method)
+    Writer.Integer(commonCapabilities, 4).is('Capabilities'),
+    Writer.Integer(session.options.maxPacketSize, 4).is('Max packet size'),
+    Writer.Integer(session.options.encoding, 1).is('Encoding'),
+    Writer.Fill(0, 23).is('Reserved bytes'),
+    Writer.StringNull(user).is('User name'),
+    authLen && authLen,
+    authResponse && authResponse,
+    base ? Writer.StringNull(base).is('Database') : null,
+    Writer.StringNull(method).is('Auth plugin')
   ];
 };
 
@@ -103,5 +103,5 @@ module.exports.readAuthSwitchRequest = function readAuthSwitchRequest (payload) 
 };
 
 module.exports.writeAuthSwitchResponse = function writeAuthSwitchResponse (data) {
-  return Writer.Buffer(data);
+  return Writer.Buffer(data).is('Auth switch response');
 }
