@@ -34,38 +34,42 @@ module.exports = {
     this.params.phase = PHASE.INIT;
   },
   data: function (packets) {
-    const operation = this;
-    const packet = packets[0];
-    const session = this.params.session;
-    this.params.sid = packet.sid;
+    try {
+      const operation = this;
+      const packet = packets[0];
+      const session = this.params.session;
+      this.params.sid = packet.sid;
 
-    switch (this.params.phase) {
-      case PHASE.INIT:
-        const handshake = Packets.readHandshakePayload(packet.payload);
-        handshakeResponse.call(this, handshake, function (response) {
-          operation.params.phase = PHASE.CHECK;
-          session.send(++operation.params.sid, response);
-        });
-        break;
-      case PHASE.CHECK:
-        const result = Packets.readAuthMoreData(packet.payload)
-          || Packets.readAuthSwitchRequest(packet.payload)
-          || Packets.readResultPacket(packet.payload, session);
+      switch (this.params.phase) {
+        case PHASE.INIT:
+          const handshake = Packets.readHandshakePayload(packet.payload);
+          handshakeResponse.call(this, handshake, function (response) {
+            operation.params.phase = PHASE.CHECK;
+            session.send(++operation.params.sid, response);
+          });
+          break;
+        case PHASE.CHECK:
+          const result = Packets.readAuthMoreData(packet.payload)
+            || Packets.readAuthSwitchRequest(packet.payload)
+            || Packets.readResultPacket(packet.payload, session);
 
-        switch (result.type) {
-          case PACKET.ERROR:
-            this.queue.trigger(CONST.ERROR, result);
-            break;
-          case PACKET.AUTH_SWITCH:
-            Authentication(result.plugin, this.params.pass || '', function (data) {
-              data && session.send(++operation.params.sid, data);
-            });
-            break;
-          case PACKET.OK:
-            this.queue.trigger(CONST.SUCCESS, result);
-            break;
-        }
-        break;
+          switch (result.type) {
+            case PACKET.ERROR:
+              this.queue.trigger(CONST.ERROR, result);
+              break;
+            case PACKET.AUTH_SWITCH:
+              Authentication(result.plugin, this.params.pass || '', function (data) {
+                data && session.send(++operation.params.sid, data);
+              });
+              break;
+            case PACKET.OK:
+              this.queue.trigger(CONST.SUCCESS, result);
+              break;
+          }
+          break;
+      }
+    } catch (error) {
+      this.queue.trigger(CONST.ERROR, error);
     }
   }
 };

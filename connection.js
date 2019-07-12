@@ -30,7 +30,7 @@ function Connection (params = EMPTY) {
   });
 
   this.socket.on(CONST.DATA, function (data) {
-    console.log('server:', data);
+    // console.log('server:', data);
     _this.queue.trigger(CONST.DATA, Packets.readPackets(data));
   });
   this.socket.on(CONST.TIMEOUT, socketTimeout);
@@ -45,7 +45,7 @@ function Connection (params = EMPTY) {
 Connection.prototype.send = function (sid, data) {
   const result = Writer.make(Packets.writePacket(sid, data));
 
-  console.log('client:', result.valueOf());
+  // console.log('client:', result.valueOf());
   this.socket.write(result);
 };
 
@@ -63,7 +63,7 @@ Connection.prototype.close = function (instant) {
 Connection.prototype.query = function (data, params = EMPTY) {
   this.queue.push(operations.query, {
     session: this,
-    data: data,
+    sql: data,
     type: 'query',
     onSuccess: params.onSuccess,
     onError: params.onError
@@ -82,6 +82,7 @@ Connection.prototype.prepare = function (command, params = EMPTY) {
   const statement = new Statement(command, this);
 
   this.queue.push(operations.prepare, {
+    sql: command,
     session: this,
     statement: statement,
     type: 'prepare_statement',
@@ -95,6 +96,7 @@ Connection.prototype.prepare = function (command, params = EMPTY) {
 Statement.prototype.execute = function (statementParams, params = EMPTY) {
   this.session.queue.push(operations.execute, {
     session: this.session,
+    sql: this.command,
     statement: this,
     params: statementParams,
     type: 'execute_statement',
@@ -108,6 +110,7 @@ Statement.prototype.execute = function (statementParams, params = EMPTY) {
 Statement.prototype.sendLongData = function (paramIndex, data, params = EMPTY) {
   this.session.queue.push(operations.sendLongData, {
     session: this.session,
+    sql: this.command,
     statement: this,
     paramIndex: paramIndex,
     data: data,

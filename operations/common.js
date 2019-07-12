@@ -1,13 +1,20 @@
 function SQLError (params) {
-  params.sql && (this.sql = params.sql);
-  params.params && (this.params = params.params);
+  this.sql = null;
+  this.params = null;
   this.code = params.code;
   this.message = params.message;
 }
 SQLError.prototype.failure = true;
 
 function handleError (error) {
-  this.params.onError && this.params.onError(new SQLError(error));
+  const sqlError = new SQLError(error);
+  this.params.sql && (sqlError.sql = this.params.sql);
+  this.params.params && (sqlError.params = this.params.params);
+  this.params.onError && this.params.onError(sqlError);
+
+  this.queue.clear();
+  this.queue.next();
+  this.params.session.close();
 }
 
 function handleSuccess (result) {
