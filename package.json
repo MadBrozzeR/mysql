@@ -1,17 +1,26 @@
 {
   "name": "mbr-mysql",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "MySQL client",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/madbrozzer/mysql.git"
   },
   "keywords": [
     "mysql"
   ],
   "author": "MadBrozzeR",
   "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/madbrozzer/mysql/issues"
+  },
+  "homepage": "https://github.com/madbrozzer/mysql#readme",
   "dependencies": {
-    "mbr-buffer": "1.2.2"
+    "mbr-buffer": "1.2.2",
+    "mbr-queue": "1.0.2"
   }
 }

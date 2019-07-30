@@ -1,6 +1,6 @@
 const net = require('net');
 const {EMPTY, CONST, CAP, COM, PACKET} = require('./constants.js');
-const Queue = require('./queue.js');
+const Queue = require('mbr-queue');
 const Reader = require('./reader.js');
 const Writer = require('./writer.js');
 const Authentication = require('./auth.js');
@@ -20,7 +20,7 @@ function Connection (params = EMPTY) {
   this.socket = new net.Socket();
   params.timeout && this.socket.setTimeout(params.timeout);
   this.queue = new Queue();
-  const handshake = this.queue.push(operations.handshake, {
+  this.queue.push(operations.handshake, {
     user: params.user,
     pass: params.pass,
     base: params.base,
