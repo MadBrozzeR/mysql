@@ -30,7 +30,7 @@ function Connection (params = EMPTY) {
   });
 
   this.socket.on(CONST.DATA, function (data) {
-    // console.log('server:', data);
+    params.options.debug && console.log('server:', data);
     _this.queue.trigger(CONST.DATA, Packets.readPackets(data));
   });
   this.socket.on(CONST.TIMEOUT, socketTimeout);
@@ -45,7 +45,7 @@ function Connection (params = EMPTY) {
 Connection.prototype.send = function (sid, data) {
   const result = Writer.make(Packets.writePacket(sid, data));
 
-  // console.log('client:', result.valueOf());
+  this.options.debug && console.log('client:', result.valueOf());
   this.socket.write(result);
 };
 
@@ -115,8 +115,11 @@ Statement.prototype.sendLongData = function (paramIndex, data, params = EMPTY) {
     paramIndex: paramIndex,
     data: data,
     type: 'send_long_data',
-    chunkSize: params.chunkSize
+    chunkSize: params.chunkSize,
+    onError: params.onError
   });
+
+  return this;
 };
 
 module.exports = Connection;

@@ -3,5 +3,6 @@ module.exports = {
   close: require('./close.js'),
   query: require('./query.js'),
   prepare: require('./prepare.js'),
-  execute: require('./execute.js')
+  execute: require('./execute.js'),
+  sendLongData: require('./send-long-data.js')
 };
