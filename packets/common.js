@@ -16,8 +16,10 @@ function readPackets (buffer) {
       sid: reader.readUIntLE(1)
     };
     packet.payload = reader.slice(packet.length);
+    packet.complete = packet.payload.length === packet.length;
     packets.push(packet);
   }
+  packets.rawData = buffer;
 
   return packets;
 };

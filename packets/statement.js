@@ -60,7 +60,7 @@ module.exports.writeExecuteRequest = function writeExecuteRequest (statement, da
         case TYPE.VARCHAR:
         case TYPE.VAR_STRING:
         default:
-          writerValue = Writer.StringLenenc(value);
+          writerValue = Writer.StringLenenc(stringify(value));
           break;
       }
 

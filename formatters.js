@@ -1,5 +1,6 @@
 const TYPE = require('./constants.js').TYPE;
 const Reader = require('./reader.js');
+const utils = require('./utils.js');
 
 function getDateValue (date) {
   if (!date) {
@@ -86,11 +87,7 @@ function dateToString (date) {
     ss: utils.zeroLead(date.getSeconds())
   };
 
-  // return utils.template(template, data);
-  // TODO Move templates to utils.
-  return template.replace(/\$\{\(w+)\}/g, function (_, key) {
-    return data[key] || '';
-  });
+  return utils.template(template, data);
 }
 
 function stringify (value) {

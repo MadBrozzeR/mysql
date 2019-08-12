@@ -131,6 +131,16 @@ Resultset.prototype.getBinaryRow = function (index) {
 
   return row;
 }
+Resultset.prototype.getAllRows = function () {
+  const result = [];
+  let row;
+
+  while (row = this.getRow()) {
+    result.push(row);
+  }
+
+  return result;
+}
 
 function readResultset (packets, session) {
   const columnCount = readColumnCount(packets[0].payload);
