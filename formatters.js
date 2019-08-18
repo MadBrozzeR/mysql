@@ -93,7 +93,7 @@ function dateToString (date) {
 function stringify (value) {
   let result = '';
 
-  if (value) {
+  if (value || value === 0) {
     if (value instanceof Date) {
       result = dateToString(value);
     } else {
