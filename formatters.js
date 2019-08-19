@@ -2,6 +2,8 @@ const TYPE = require('./constants.js').TYPE;
 const Reader = require('./reader.js');
 const utils = require('./utils.js');
 
+const DATE_RE = /^(\d{4})-(\d{2})-(\d{2})(?: (\d{2}):(\d{2}):(\d{2}))?$/;
+
 function getDateValue (date) {
   if (!date) {
     return null;
@@ -18,15 +20,15 @@ function getDateValue (date) {
   };
 
   if (date.length >= 4) {
-    dateFields.year = reader.readInt(2);
-    dateFields.month = reader.readInt(1) - 1;
-    dateFields.day = reader.readInt(1);
+    dateFields.year = reader.readUIntLE(2);
+    dateFields.month = reader.readUIntLE(1) - 1;
+    dateFields.day = reader.readUIntLE(1);
     if (date.length >= 7) {
-      dateFields.hours = reader.readInt(1);
-      dateFields.minutes = reader.readInt(1);
-      dateFields.seconds = reader.readInt(1);
+      dateFields.hours = reader.readUIntLE(1);
+      dateFields.minutes = reader.readUIntLE(1);
+      dateFields.seconds = reader.readUIntLE(1);
       if (date.length === 11) {
-        dateFields.milliseconds = reader.readInt(4) / 1000;
+        dateFields.milliseconds = reader.readUIntLE(4) / 1000;
       }
     }
   }
@@ -67,7 +69,7 @@ function getDataByColumnType (data, column) {
     case TYPE.DATETIME:
     case TYPE.DATE:
     case TYPE.TIMESTAMP:
-      data = getDateValue(data);
+      data = stringToDate(data);
       break
     default:
       data = data && data.toString();
@@ -103,7 +105,21 @@ function stringify (value) {
   return result;
 }
 
+function stringToDate (string) {
+  const regMatch = DATE_RE.exec(string);
+
+  return regMatch ? new Date(
+    parseInt(regMatch[1], 10),
+    parseInt(regMatch[2], 10) - 1,
+    parseInt(regMatch[3], 10),
+    regMatch[4] ? parseInt(regMatch[4], 10) : 0,
+    regMatch[5] ? parseInt(regMatch[5], 10) : 0,
+    regMatch[6] ? parseInt(regMatch[6], 10) : 0
+  ) : null;
+}
+
 module.exports = {
   getDataByColumnType,
+  getDateValue,
   stringify
 };

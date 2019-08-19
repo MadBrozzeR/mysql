@@ -2,6 +2,7 @@ const Reader = require('../reader.js');
 const CAP = require('../constants.js').CAP;
 const TYPE = require('../constants.js').TYPE;
 const getDataByColumnType = require('../formatters.js').getDataByColumnType;
+const getDateValue = require('../formatters.js').getDateValue;
 const readResultPacket = require('./common.js').readResultPacket;
 
 function readColumnCount (payload) {
@@ -116,10 +117,15 @@ Resultset.prototype.getBinaryRow = function (index) {
           data = parseInt(reader.readUIntLE(1), 10);
           break;
         case TYPE.DOUBLE:
-          data = reader.read(8);
+          data = reader.readDoubleLE();
           break;
         case TYPE.FLOAT:
-          data = reader.read(4);
+          data = reader.readFloatLE();
+          break;
+        case TYPE.DATE:
+        case TYPE.DATETIME:
+        case TYPE.TIMESTAMP:
+          data = getDateValue(reader.readStrLenenc(keepBuffer));
           break;
         default:
           data = getDataByColumnType(reader.readStrLenenc(keepBuffer), this.columns[index]);
