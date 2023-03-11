@@ -95,7 +95,7 @@ module.exports.readAuthSwitchRequest = function readAuthSwitchRequest (payload) 
     result = {
       type: reader.readUIntLE(1),
       plugin: reader.readStrNull(),
-      data: reader.readStrEof()
+      data: reader.readEof()
     };
   }
 
@@ -103,5 +103,5 @@ module.exports.readAuthSwitchRequest = function readAuthSwitchRequest (payload) 
 };
 
 module.exports.writeAuthSwitchResponse = function writeAuthSwitchResponse (data) {
-  return Writer.Buffer(data).is('Auth switch response');
+  return [Writer.Buffer(data).is('Auth switch response')];
 }

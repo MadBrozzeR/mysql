@@ -18,6 +18,14 @@ const emptyBuffer = Buffer.from('');
 const MAX_SIZE = 1024 * 1024 * 3;
 const MIN_SIZE = 1024;
 
+function BigIntOrNot (number) {
+  if (typeof BigInt !== 'undefined') {
+    return BigInt(number);
+  }
+
+  return number;
+}
+
 module.exports.writeExecuteRequest = function writeExecuteRequest (statement, data = []) {
   const types = [];
   const values = [];
@@ -51,7 +59,7 @@ module.exports.writeExecuteRequest = function writeExecuteRequest (statement, da
           writerValue = Writer.Integer(value, 4);
           break;
         case TYPE.LONGLONG:
-          writerValue = Writer.Integer(value, 8);
+          writerValue = Writer.Integer(BigIntOrNot(value), 8);
           break;
         case TYPE.TINY_BLOB:
         case TYPE.MEDIUM_BLOB:

@@ -32,7 +32,7 @@ Authentication[AUTH.MYSQL_NATIVE_PASSWORD] = function (params, callback) {
   passHash1.on(CONST.READABLE, function () {
     const data = passHash1.read();
     if (data) {
-      hashedPass = data; 
+      hashedPass = data;
       hashedPass && passHash2.end(hashedPass);
     }
   });
@@ -80,7 +80,7 @@ module.exports = function (data, password, callback) {
 
   if (auth) {
     auth({
-      authData: data.data, 
+      authData: data.data,
       pass: Buffer.from(password)
     }, callback);
   } else {

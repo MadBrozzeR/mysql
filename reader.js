@@ -39,10 +39,14 @@ MySQLReader.prototype.readStrNull = function (encoding) {
   return result;
 }
 
-MySQLReader.prototype.readStrEof = function () {
+MySQLReader.prototype.readEof = function () {
   const result = this.buffer.slice(this.index);
   this.index = this.buffer.length;
-  return result.toString();
+
+  return result;
+}
+MySQLReader.prototype.readStrEof = function () {
+  return this.readEof().toString();
 }
 
 module.exports = MySQLReader;

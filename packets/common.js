@@ -19,7 +19,6 @@ function readPackets (buffer) {
     packet.complete = packet.payload.length === packet.length;
     packets.push(packet);
   }
-  packets.rawData = buffer;
 
   return packets;
 };

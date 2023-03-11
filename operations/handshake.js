@@ -31,7 +31,10 @@ module.exports = {
   error: handleError,
   success: handleSuccess,
   init: function () {
+    const session = this.params.session;
     this.params.phase = PHASE.INIT;
+
+    session.socket.connect(session.options.port, session.options.host);
   },
   data: function (packets) {
     try {
@@ -58,8 +61,11 @@ module.exports = {
               this.queue.trigger(CONST.ERROR, result);
               break;
             case PACKET.AUTH_SWITCH:
-              Authentication(result.plugin, this.params.pass || '', function (data) {
-                data && session.send(++operation.params.sid, data);
+              Authentication({ name: result.plugin, data: result.data }, this.params.pass || '', function (data) {
+                data && session.send(
+                  ++operation.params.sid,
+                  Packets.writeAuthSwitchResponse(data)
+                );
               });
               break;
             case PACKET.OK:

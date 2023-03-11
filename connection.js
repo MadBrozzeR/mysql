@@ -7,19 +7,21 @@ const Authentication = require('./auth.js');
 const capabilities = require('./capabilities.js');
 const Packets = require('./packets/index.js');
 const operations = require('./operations/index.js');
+const Packer = require('./packer.js');
 
 function socketTimeout () {
   this.end();
 }
 
 function Connection (params = EMPTY) {
-  const _this = this;
+  const connection = this;
 
   this.options = params.options;
 
   this.socket = new net.Socket();
-  params.timeout && this.socket.setTimeout(params.timeout);
   this.queue = new Queue();
+  this.packer = new Packer();
+
   this.queue.push(operations.handshake, {
     user: params.user,
     pass: params.pass,
@@ -31,21 +33,26 @@ function Connection (params = EMPTY) {
 
   this.socket.on(CONST.DATA, function (data) {
     params.options.debug && console.log('server:', data);
-    _this.queue.trigger(CONST.DATA, Packets.readPackets(data));
+
+    const packets = connection.packer.push(data);
+
+    if (packets) {
+      connection.queue.trigger(CONST.DATA, packets);
+    }
   });
   this.socket.on(CONST.TIMEOUT, socketTimeout);
+  params.timeout && this.socket.setTimeout(params.timeout);
   params.onClose && this.socket.on(CONST.CLOSE, params.onClose);
   this.socket.on(CONST.ERROR, function (error) {
-    _this.queue.trigger(CONST.ERROR, error);
+    connection.queue.trigger(CONST.ERROR, error);
   });
-
-  this.socket.connect(this.options.port, this.options.host);
 }
 
 Connection.prototype.send = function (sid, data) {
   const result = Writer.make(Packets.writePacket(sid, data));
+  // console.log(Writer.debug(Packets.writePacket(sid, data)));
 
-  this.options.debug && console.log('client:', result.valueOf());
+  this.options.debug && console.log('client:', result);
   this.socket.write(result);
 };
 
