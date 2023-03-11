@@ -121,5 +121,6 @@ function stringToDate (string) {
 module.exports = {
   getDataByColumnType,
   getDateValue,
-  stringify
+  stringify,
+  dateToString,
 };
