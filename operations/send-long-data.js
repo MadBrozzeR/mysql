@@ -3,6 +3,8 @@ const CONST = require('../constants.js').CONST;
 const common = require('./common.js');
 
 module.exports = {
+  name: 'send-long-data',
+
   error: common.handleError,
   init: function () {
     try {

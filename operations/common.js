@@ -1,3 +1,5 @@
+const { CONST } = require('../constants.js');
+
 function SQLError (params) {
   this.sql = null;
   this.params = null;
@@ -22,7 +24,19 @@ function handleSuccess (result) {
   this.queue.next();
 }
 
+function collect (data) {
+  const { packer } = this.params.session;
+
+  const packets = packer.push(data);
+
+  if (packets) {
+    packer.clear();
+    this.queue.trigger(CONST.DATA, packets);
+  }
+}
+
 module.exports = {
   handleError: handleError,
-  handleSuccess: handleSuccess
+  handleSuccess: handleSuccess,
+  collect: collect,
 };

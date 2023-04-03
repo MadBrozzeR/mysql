@@ -1,10 +1,11 @@
-const handleError = require('./common.js').handleError;
-const handleSuccess = require('./common.js').handleSuccess;
+const { handleError, handleSuccess, collect } = require('./common.js');
 const Packets = require('../packets/index.js');
 const PACKET = require('../constants.js').PACKET;
 const CONST = require('../constants.js').CONST;
 
 module.exports = {
+  name: 'prepare',
+
   init: function () {
     try {
       this.params.session.send(0, Packets.writePrepareRequest(this.params.statement.command));
@@ -17,6 +18,7 @@ module.exports = {
     this.params.statement.model = result;
     handleSuccess.call(this, result);
   },
+  collect: collect,
   data: function (packets) {
     try {
       const session = this.params.session;

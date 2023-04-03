@@ -34,11 +34,8 @@ function Connection (params = EMPTY) {
   this.socket.on(CONST.DATA, function (data) {
     params.options.debug && console.log('server:', data);
 
-    const packets = connection.packer.push(data);
-
-    if (packets) {
-      connection.queue.trigger(CONST.DATA, packets);
-    }
+    // console.log(connection.queue.queue[0].listeners.name, data.toString('hex'));
+    connection.queue.trigger(CONST.COLLECT, data);
   });
   this.socket.on(CONST.TIMEOUT, socketTimeout);
   params.timeout && this.socket.setTimeout(params.timeout);

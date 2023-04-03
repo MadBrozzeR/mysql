@@ -1,5 +1,4 @@
-const handleError = require('./common.js').handleError;
-const handleSuccess = require('./common.js').handleSuccess;
+const { handleError, handleSuccess, collect } = require('./common.js');
 const Authentication = require('../auth.js');
 const Packets = require('../packets/index.js');
 const PACKET = require('../constants.js').PACKET;
@@ -28,6 +27,8 @@ function handshakeResponse (handshake, callback) {
 }
 
 module.exports = {
+  name: 'handshake',
+
   error: handleError,
   success: handleSuccess,
   init: function () {
@@ -36,6 +37,7 @@ module.exports = {
 
     session.socket.connect(session.options.port, session.options.host);
   },
+  collect: collect,
   data: function (packets) {
     try {
       const operation = this;

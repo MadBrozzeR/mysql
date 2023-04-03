@@ -63,9 +63,14 @@ Packer.prototype.get = function () {
   }
 
   const result = this.packets;
-  this.packets = [];
 
   return result;
 }
+
+Packer.prototype.clear = function () {
+  this.packets = [];
+
+  return this;
+};
 
 module.exports = Packer;

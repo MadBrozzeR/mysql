@@ -1,5 +1,6 @@
 module.exports = {
   CONST: {
+    COLLECT: 'collect',
     DATA: 'data',
     END: 'end',
     ERROR: 'error',

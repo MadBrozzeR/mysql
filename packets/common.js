@@ -124,5 +124,5 @@ module.exports = {
   readPackets: readPackets,
   readLocalInfileResponse: readLocalInfileResponse,
   readResultPacket: readResultPacket,
-  writePacket: writePacket
+  writePacket: writePacket,
 };

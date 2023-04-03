@@ -1,10 +1,11 @@
-const handleError = require('./common.js').handleError;
-const handleSuccess = require('./common.js').handleSuccess;
+const { handleError, handleSuccess, collect } = require('./common.js');
 const Packets = require('../packets/index.js');
 const PACKET = require('../constants.js').PACKET;
 const CONST = require('../constants.js').CONST;
 
 module.exports = {
+  name: 'query',
+
   init: function () {
     try {
       this.params.session.send(0, Packets.writeQueryRequest(this.params.sql));
@@ -14,6 +15,7 @@ module.exports = {
   },
   error: handleError,
   success: handleSuccess,
+  collect: collect,
   data: function (packets) {
     try {
       const session = this.params.session;
